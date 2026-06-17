@@ -30,14 +30,27 @@ def health():
 
 
 # Serve frontend in production (Railway)
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
-if os.path.isdir(frontend_path):
+# Tenta ../frontend (root do repo) e ../../frontend (relativo ao app/)
+_base = os.path.dirname(__file__)
+_candidates = [
+    os.path.join(_base, "..", "..", "frontend"),
+    os.path.join(_base, "..", "frontend"),
+    os.path.join(_base, "frontend"),
+]
+frontend_path = next((p for p in _candidates if os.path.isdir(p)), None)
+
+if frontend_path:
+    frontend_path = os.path.abspath(frontend_path)
     app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 
-    @app.get("/verify")
+    @app.get("/verify", include_in_schema=False)
     def verify_page():
         return FileResponse(os.path.join(frontend_path, "index.html"))
 
     @app.get("/", include_in_schema=False)
     def root():
         return FileResponse(os.path.join(frontend_path, "index.html"))
+else:
+    @app.get("/", include_in_schema=False)
+    def root():
+        return {"status": "ok", "message": "API rodando. Frontend não encontrado."}
