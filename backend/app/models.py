@@ -62,6 +62,7 @@ class Item(Base):
     preco = Column(Numeric(10, 2), default=0)
     qtd = Column(Integer, default=1)
     modo_individual = Column(Boolean, default=False)
+    nota = Column(String, nullable=True)
     ordem = Column(Integer, default=0)
     sessao = relationship("Sessao", back_populates="itens")
     atribuicoes = relationship("Atribuicao", back_populates="item", cascade="all, delete-orphan")

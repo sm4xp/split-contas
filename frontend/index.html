@@ -149,6 +149,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* User menu */
 .user-btn{background:none;border:none;cursor:pointer;width:32px;height:32px;border-radius:50%;background:#E1F5EE;color:#085041;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* Offline banner */
+.offline-banner{background:#FFF3CD;color:#7D5907;font-size:12px;padding:6px 14px;text-align:center;flex-shrink:0;display:none}
+.offline-banner.visible{display:block}
+
+/* Nota do item */
+.item-nota{font-size:11px;color:#999;margin-top:3px;display:flex;align-items:center;gap:3px;cursor:pointer}
+.item-nota-input{font-size:11px;border:none;border-bottom:1px solid #ddd;outline:none;background:transparent;color:#666;width:100%;font-family:inherit;padding:2px 0}
+
+/* Botão câmera */
+.btn-camera{background:none;border:1px solid rgba(0,0,0,.2);border-radius:8px;padding:6px 9px;font-size:14px;cursor:pointer;color:#111;display:flex;align-items:center}
+.btn-camera:active{transform:scale(.97);background:#f0f0f0}
+
+/* WhatsApp button */
+.btn-whatsapp{background:#25D366;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.btn-whatsapp:active{background:#1DA851}
+.btn-whatsapp-outline{background:none;color:#25D366;border:1px solid #25D366;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px}
+.btn-whatsapp-outline:active{background:#f0fdf4}
+
+/* Saldo */
+.saldo-section{margin-top:16px;border-top:1px solid rgba(0,0,0,.08);padding-top:14px}
+.saldo-title{font-size:14px;font-weight:600;color:#111;margin-bottom:10px}
+.saldo-pagador-select{width:100%;border:1px solid rgba(0,0,0,.2);border-radius:8px;padding:9px 12px;font-size:14px;background:#fff;color:#111;font-family:inherit;margin-bottom:10px;-webkit-appearance:none}
+.saldo-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid rgba(0,0,0,.07)}
+.saldo-row:last-child{border-bottom:none}
 </style>
 </head>
 <body>
@@ -171,6 +196,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <!-- App -->
 <div id="app-screen" class="app" style="display:none">
+  <div id="offline-banner" class="offline-banner">⚠️ Modo offline — dados podem estar desatualizados</div>
   <div class="topbar">
     <div>
       <div class="topbar-title">🍽️ Divisor de Contas</div>
@@ -178,6 +204,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div style="display:flex;gap:6px;align-items:center">
       <button class="btn-sm" id="btn-grupo" onclick="toggleModoGrupo()"><i class="ti ti-users"></i> Grupo</button>
+      <button class="btn-camera" onclick="abrirScanner()" title="Escanear recibo">📷</button>
       <button class="btn-sm" onclick="abrirModalItem()"><i class="ti ti-plus"></i> Item</button>
       <button class="user-btn" onclick="abrirMenuUsuario()" title="Conta"><i class="ti ti-user"></i></button>
     </div>
@@ -264,13 +291,26 @@ let modalPessoa_emoji = '👤', modalPessoa_cor = 0, modalItem_emoji = '🍺';
 const fmtR = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
 const cor = idx => CORES[idx % CORES.length];
 
+let isOffline = false;
+
+function setOffline(v) {
+  isOffline = v;
+  const b = document.getElementById('offline-banner');
+  if (b) b.className = 'offline-banner' + (v ? ' visible' : '');
+}
+
 async function api(method, path, body) {
   const opts = {
     method,
     headers: {'Content-Type': 'application/json', ...(token ? {'Authorization': 'Bearer ' + token} : {})},
   };
   if (body !== undefined) opts.body = JSON.stringify(body);
-  const r = await fetch(API + path, opts);
+  let r;
+  try {
+    r = await fetch(API + path, opts);
+  } catch (netErr) {
+    throw new Error('offline');
+  }
   if (!r.ok) {
     const err = await r.json().catch(() => ({detail: 'Erro ' + r.status}));
     throw new Error(err.detail || 'Erro');
@@ -428,7 +468,32 @@ async function novaSessao() {
 
 async function selecionarSessao(id) {
   sessaoId = id;
-  const data = await api('GET', '/sessoes/' + id);
+  let data;
+  try {
+    data = await api('GET', '/sessoes/' + id);
+    setOffline(false);
+  } catch(e) {
+    if (e.message === 'offline') {
+      const cached = localStorage.getItem('split_offline_' + id);
+      if (cached) {
+        const d = JSON.parse(cached);
+        pessoas = d.pessoas || [];
+        itens = d.itens || [];
+        gorjetaPct = d.gorjetaPct || 12;
+        setOffline(true);
+        modoGrupo = false; grupoSelecionado = [];
+        [0,10,12,15].forEach(v => {
+          const b = document.getElementById('gb-' + v);
+          if (b) b.className = 'gorjeta-btn' + (v === gorjetaPct ? ' ativo' : '');
+        });
+        document.getElementById('gorjeta-custom').value = '';
+        render();
+        renderSessoesBar();
+        return;
+      }
+    }
+    throw e;
+  }
   pessoas = data.pessoas || [];
   itens = data.itens || [];
   gorjetaPct = parseFloat(data.gorjeta_pct) || 12;
@@ -461,7 +526,14 @@ function renderSessoesBar() {
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────────
-function render() { renderPessoas(); renderItens(); renderTotais(); renderGroupBar(); }
+function render() {
+  renderPessoas(); renderItens(); renderTotais(); renderGroupBar();
+  if (sessaoId) {
+    try {
+      localStorage.setItem('split_offline_' + sessaoId, JSON.stringify({pessoas, itens, gorjetaPct}));
+    } catch(e) {}
+  }
+}
 
 function renderPessoas() {
   const c = document.getElementById('pessoas-scroll');
@@ -569,6 +641,32 @@ function renderItens() {
         pills.appendChild(pill);
       });
       info.appendChild(pills);
+    }
+
+    // Nota do item
+    if (it._eNota) {
+      const notaWrap = document.createElement('div'); notaWrap.style.cssText = 'margin-top:4px';
+      const notaInp = document.createElement('input'); notaInp.className = 'item-nota-input';
+      notaInp.placeholder = 'Observação…'; notaInp.value = it.nota || '';
+      notaInp.onblur = () => {
+        it.nota = notaInp.value.trim(); it._eNota = false;
+        api('PUT', `/sessoes/${sessaoId}/itens/${it.id}`, {nota: it.nota}).catch(()=>{});
+        render();
+      };
+      notaInp.onkeydown = e => { if (e.key === 'Enter') notaInp.blur(); };
+      notaWrap.appendChild(notaInp);
+      info.appendChild(notaWrap);
+      setTimeout(() => notaInp.focus(), 10);
+    } else {
+      const notaEl = document.createElement('div'); notaEl.className = 'item-nota';
+      if (it.nota) {
+        notaEl.textContent = '📝 ' + it.nota;
+      } else {
+        notaEl.textContent = '📝 Adicionar observação';
+        notaEl.style.color = '#ddd';
+      }
+      notaEl.onclick = e => { e.stopPropagation(); it._eNota = true; render(); };
+      info.appendChild(notaEl);
     }
 
     // Controles qty
@@ -849,6 +947,7 @@ function renderMItem() {
   const pn = document.getElementById('inp-item-nome')?.value || '';
   const pp = document.getElementById('inp-item-preco')?.value || '';
   const pq = document.getElementById('inp-item-qtd')?.value || '1';
+  const pnota = document.getElementById('inp-item-nota')?.value || '';
   document.getElementById('modal-container').innerHTML = `<div class="modal-bg"><div class="modal">
   <div class="modal-handle"></div><div class="modal-title">Adicionar item</div>
   <div class="section-label">Ícone</div><div class="emoji-grid">${emojis}</div>
@@ -860,6 +959,9 @@ function renderMItem() {
     <input class="modal-input" id="inp-item-qtd" type="number" placeholder="Qtd" min="1" step="1" value="${pq}" style="max-width:100px" inputmode="numeric">
     <span style="font-size:12px;color:#888;align-self:center;padding-left:4px">unidade(s)</span>
   </div>
+  <div class="modal-input-row">
+    <input class="modal-input" id="inp-item-nota" placeholder="Observação (opcional)" value="${pnota}">
+  </div>
   <button class="btn-add-full" onclick="confirmarItem()"><i class="ti ti-plus"></i> Adicionar item</button>
   <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
   </div></div>`;
@@ -869,8 +971,9 @@ async function confirmarItem() {
   const nome = document.getElementById('inp-item-nome').value.trim() || 'Item';
   const preco = parseFloat(document.getElementById('inp-item-preco').value) || 0;
   const qtd = parseInt(document.getElementById('inp-item-qtd').value) || 1;
+  const nota = document.getElementById('inp-item-nota')?.value.trim() || null;
   try {
-    const it = await api('POST', `/sessoes/${sessaoId}/itens`, {nome, emoji: modalItem_emoji, preco, qtd});
+    const it = await api('POST', `/sessoes/${sessaoId}/itens`, {nome, emoji: modalItem_emoji, preco, qtd, nota});
     it.atribuicoes = it.atribuicoes || [];
     itens.push(it);
     fecharModal(); render();
@@ -878,44 +981,160 @@ async function confirmarItem() {
 }
 
 // ── Resumo ─────────────────────────────────────────────────────────────────────
-function abrirResumo() {
-  let html = `<div class="modal-bg"><div class="modal"><div class="modal-handle"></div><div class="modal-title">📋 Resumo da conta</div>`;
+function calcResumo() {
+  // Returns array of {p, subtot, gorj, total, rows, rowsData} and grand totals
   let grand = 0;
+  const resumos = [];
   pessoas.forEach(p => {
-    let subtot = 0; const rows = [];
+    let subtot = 0;
+    const rows = [];
+    const rowsData = []; // for CSV
     itens.forEach(it => {
       let v = 0;
       if (it.modo_individual) {
         const a = it.atribuicoes.find(x => x.pessoa_id === p.id);
-        if (a) { v = Number(it.preco) * a.qtd; subtot += v; rows.push(`<div class="resumo-item-row"><span>${it.emoji} ${it.nome} ×${a.qtd}</span><span>${fmtR(v)}</span></div>`); }
+        if (a) {
+          v = Number(it.preco) * a.qtd; subtot += v;
+          rows.push(`<div class="resumo-item-row"><span>${it.emoji} ${it.nome} ×${a.qtd}</span><span>${fmtR(v)}</span></div>`);
+          rowsData.push({nome: it.nome, qtd: a.qtd, preco: Number(it.preco), subtotal: v});
+        }
       } else {
         const n = it.atribuicoes.length;
         if (n > 0 && it.atribuicoes.some(a => a.pessoa_id === p.id)) {
           v = Number(it.preco) * it.qtd / n; subtot += v;
           const div = n > 1 ? ` ÷${n}` : '';
           rows.push(`<div class="resumo-item-row"><span>${it.emoji} ${it.nome} ×${it.qtd}${div}</span><span>${fmtR(v)}</span></div>`);
+          rowsData.push({nome: it.nome, qtd: it.qtd, div: n, preco: Number(it.preco), subtotal: v});
         }
       }
     });
     grand += subtot;
     const gorj = subtot * gorjetaPct / 100;
     const total = subtot + gorj;
-    const gorjRow = gorjetaPct > 0 ? `<div class="resumo-item-row" style="color:#BA7517"><span>🤌 Gorjeta (${gorjetaPct}%)</span><span>${fmtR(gorj)}</span></div>` : '';
-    const c_ = cor(p.cor_idx);
-    html += `<div class="resumo-pessoa"><div class="resumo-header">
-      <div class="resumo-avatar" style="background:${c_.bg};color:${c_.txt}">${p.emoji}</div>
-      <span class="resumo-nome">${p.nome}</span>
-      <span class="resumo-total">${fmtR(total)}</span>
-    </div>${rows.length ? rows.join('') + gorjRow : '<div style="font-size:12px;color:#bbb">Nenhum item atribuído</div>'}</div>`;
+    resumos.push({p, subtot, gorj, total, rows, rowsData});
   });
   const grandGorj = grand * gorjetaPct / 100;
+  return {resumos, grand, grandGorj};
+}
+
+function montarTextoWhatsapp(r) {
+  const sessaoNome = sessoes.find(s => s.id === sessaoId)?.nome || 'Conta';
+  let txt = `Olá ${r.p.nome}! Sua parte em "${sessaoNome}":\n\n`;
+  r.rowsData.forEach(row => {
+    txt += `${row.nome}: ${fmtR(row.subtotal)}\n`;
+  });
+  if (gorjetaPct > 0) txt += `\nGorjeta (${gorjetaPct}%): ${fmtR(r.gorj)}`;
+  txt += `\n\nTotal: ${fmtR(r.total)}`;
+  return txt;
+}
+
+function abrirWhatsapp(texto) {
+  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+}
+
+function exportarCSV() {
+  const {resumos} = calcResumo();
+  const sessaoNome = sessoes.find(s => s.id === sessaoId)?.nome || 'Conta';
+  let csv = 'Pessoa,Item,Quantidade,Preço Unitário,Subtotal,Gorjeta,Total\n';
+  resumos.forEach(r => {
+    r.rowsData.forEach(row => {
+      const gorjRow = row.subtotal * gorjetaPct / 100;
+      const totalRow = row.subtotal + gorjRow;
+      csv += `"${r.p.nome}","${row.nome}",${row.qtd},${row.preco.toFixed(2)},${row.subtotal.toFixed(2)},${gorjRow.toFixed(2)},${totalRow.toFixed(2)}\n`;
+    });
+  });
+  // Totais gerais
+  const {grand, grandGorj} = calcResumo();
+  csv += `"TOTAL","",,,${grand.toFixed(2)},${grandGorj.toFixed(2)},${(grand+grandGorj).toFixed(2)}\n`;
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'conta.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function abrirResumo() {
+  const {resumos, grand, grandGorj} = calcResumo();
+  const sessaoNome = sessoes.find(s => s.id === sessaoId)?.nome || 'Conta';
+
+  let html = `<div class="modal-bg"><div class="modal"><div class="modal-handle"></div><div class="modal-title">📋 Resumo da conta</div>`;
+
+  resumos.forEach(r => {
+    const c_ = cor(r.p.cor_idx);
+    const gorjRow = gorjetaPct > 0 ? `<div class="resumo-item-row" style="color:#BA7517"><span>🤌 Gorjeta (${gorjetaPct}%)</span><span>${fmtR(r.gorj)}</span></div>` : '';
+    const waText = montarTextoWhatsapp(r);
+    html += `<div class="resumo-pessoa">
+      <div class="resumo-header">
+        <div class="resumo-avatar" style="background:${c_.bg};color:${c_.txt}">${r.p.emoji}</div>
+        <span class="resumo-nome">${r.p.nome}</span>
+        <span class="resumo-total">${fmtR(r.total)}</span>
+      </div>
+      ${r.rows.length ? r.rows.join('') + gorjRow : '<div style="font-size:12px;color:#bbb">Nenhum item atribuído</div>'}
+      ${r.rows.length ? `<div style="margin-top:8px;display:flex;justify-content:flex-end">
+        <button class="btn-whatsapp-outline" onclick="abrirWhatsapp(${JSON.stringify(waText).replace(/'/g,"\\'")})">
+          <i class="ti ti-brand-whatsapp"></i> Enviar
+        </button>
+      </div>` : ''}
+    </div>`;
+  });
+
   html += `<div style="display:flex;flex-direction:column;gap:4px;padding:12px 4px;border-top:1px solid rgba(0,0,0,.08);margin-top:4px">
     <div style="display:flex;justify-content:space-between;font-size:13px;color:#888"><span>Subtotal</span><span>${fmtR(grand)}</span></div>
     ${gorjetaPct > 0 ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:#BA7517"><span>🤌 Gorjeta (${gorjetaPct}%)</span><span>${fmtR(grandGorj)}</span></div>` : ''}
     <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;margin-top:4px"><span>Total geral</span><span style="color:#0F6E56">${fmtR(grand + grandGorj)}</span></div>
   </div>`;
-  html += `<button class="btn-cancel" onclick="fecharModal()">Fechar</button></div></div>`;
+
+  // Seção: quem paga pra quem
+  html += `<div class="saldo-section">
+    <div class="saldo-title">💸 Quem paga pra quem</div>
+    <select class="saldo-pagador-select" id="saldo-pagador" onchange="renderSaldo()">
+      <option value="">— Selecionar quem pagou a conta —</option>
+      ${pessoas.map(p => `<option value="${p.id}">${p.emoji} ${p.nome}</option>`).join('')}
+    </select>
+    <div id="saldo-rows"></div>
+  </div>`;
+
+  // Botões de ação global
+  html += `<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+    <button class="btn-whatsapp" onclick="compartilharTudo()"><i class="ti ti-brand-whatsapp"></i> Resumo completo</button>
+    <button class="btn-sm" onclick="exportarCSV()"><i class="ti ti-download"></i> CSV</button>
+  </div>`;
+
+  html += `<button class="btn-cancel" onclick="fecharModal()" style="margin-top:8px">Fechar</button></div></div>`;
   document.getElementById('modal-container').innerHTML = html;
+}
+
+function renderSaldo() {
+  const pagadorId = document.getElementById('saldo-pagador')?.value;
+  const el = document.getElementById('saldo-rows'); if (!el) return;
+  if (!pagadorId) { el.innerHTML = ''; return; }
+  const {resumos} = calcResumo();
+  const pagador = pessoas.find(p => p.id === pagadorId);
+  const rows = resumos.filter(r => r.p.id !== pagadorId && r.total > 0).map(r => {
+    const c_ = cor(r.p.cor_idx);
+    const cp_ = cor(pagador.cor_idx);
+    const waText = `Olá ${r.p.nome}! Você deve ${fmtR(r.total)} para ${pagador.nome}.\n(${sessoes.find(s=>s.id===sessaoId)?.nome || 'Conta'})`;
+    return `<div class="saldo-row">
+      <span style="font-size:13px">${r.p.emoji} <strong>${r.p.nome}</strong> → ${pagador.emoji} ${pagador.nome}: <strong>${fmtR(r.total)}</strong></span>
+      <button class="btn-whatsapp-outline" style="flex-shrink:0" onclick="abrirWhatsapp(${JSON.stringify(waText)})"><i class="ti ti-brand-whatsapp"></i></button>
+    </div>`;
+  });
+  el.innerHTML = rows.length ? rows.join('') : '<div style="font-size:12px;color:#bbb;padding:8px 0">Nenhum devedor</div>';
+}
+
+function compartilharTudo() {
+  const {resumos} = calcResumo();
+  const sessaoNome = sessoes.find(s => s.id === sessaoId)?.nome || 'Conta';
+  let txt = `📋 Resumo: ${sessaoNome}\n\n`;
+  resumos.forEach(r => {
+    if (r.total > 0) {
+      txt += `${r.p.emoji} ${r.p.nome}: ${fmtR(r.total)}\n`;
+    }
+  });
+  const {grand, grandGorj} = calcResumo();
+  txt += `\nTotal geral: ${fmtR(grand + grandGorj)}`;
+  if (gorjetaPct > 0) txt += ` (incl. ${gorjetaPct}% gorjeta)`;
+  abrirWhatsapp(txt);
 }
 
 function fecharModal() { document.getElementById('modal-container').innerHTML = ''; }
@@ -948,6 +1167,53 @@ function tEnd(e) {
   if (ic && ic.classList.contains('pessoa-icon') && touchData.moved) atribuirIgual(touchData.iid, ic.dataset.pid);
   document.querySelectorAll('.pessoa-icon').forEach(ic => ic.classList.remove('drop-hover'));
   touchData = null;
+}
+
+// ── Scanner de recibo ──────────────────────────────────────────────────────────
+function abrirScanner() {
+  if (!sessaoId) return;
+  document.getElementById('modal-container').innerHTML = `
+  <div class="modal-bg"><div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📷 Escanear recibo</div>
+    <p style="font-size:13px;color:#666;margin-bottom:16px">Tire uma foto do recibo ou nota fiscal e os itens serão adicionados automaticamente.</p>
+    <input type="file" id="scanner-file" accept="image/*" capture="environment" style="display:none" onchange="processarRecibo(this)">
+    <button class="btn-add-full" onclick="document.getElementById('scanner-file').click()">
+      <i class="ti ti-camera"></i> Escolher foto / câmera
+    </button>
+    <div id="scanner-loading" style="display:none;text-align:center;padding:16px;font-size:14px;color:#888">⏳ Lendo recibo…</div>
+    <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+  </div></div>`;
+}
+
+async function processarRecibo(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('scanner-loading').style.display = 'block';
+  document.querySelector('#modal-container .btn-add-full').style.display = 'none';
+  try {
+    const fd = new FormData(); fd.append('file', file);
+    const r = await fetch(API + `/sessoes/${sessaoId}/scan-receipt`, {
+      method: 'POST',
+      headers: {Authorization: 'Bearer ' + token},
+      body: fd,
+    });
+    if (!r.ok) throw new Error('Erro ao processar recibo');
+    const itensScan = await r.json();
+    fecharModal();
+    for (const it of itensScan) {
+      try {
+        const novo = await api('POST', `/sessoes/${sessaoId}/itens`, {
+          nome: it.nome || 'Item', emoji: it.emoji || '🍽️',
+          preco: Number(it.preco) || 0, qtd: Number(it.qtd) || 1,
+        });
+        novo.atribuicoes = [];
+        itens.push(novo);
+      } catch(e) { console.error('Erro ao adicionar item do recibo:', e); }
+    }
+    render();
+  } catch(e) {
+    document.getElementById('scanner-loading').textContent = '❌ ' + e.message;
+  }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────

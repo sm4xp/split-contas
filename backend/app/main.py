@@ -9,6 +9,15 @@ from .routers import auth, sessoes
 
 Base.metadata.create_all(bind=engine)
 
+# Safe migration: add nota column to itens if missing
+from sqlalchemy import text
+with engine.connect() as conn:
+    try:
+        conn.execute(text("ALTER TABLE itens ADD COLUMN nota VARCHAR"))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+
 app = FastAPI(title="Divisor de Contas API", version="1.0.0")
 
 FRONTEND_ORIGIN = os.getenv("FRONTEND_URL", "http://localhost:5500")

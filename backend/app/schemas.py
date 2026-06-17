@@ -55,6 +55,7 @@ class ItemIn(BaseModel):
     emoji: str = "🍺"
     preco: Decimal = Decimal("0")
     qtd: int = 1
+    nota: Optional[str] = None
 
 
 class ItemUpdate(BaseModel):
@@ -63,6 +64,7 @@ class ItemUpdate(BaseModel):
     preco: Optional[Decimal] = None
     qtd: Optional[int] = None
     modo_individual: Optional[bool] = None
+    nota: Optional[str] = None
 
 
 class ItemOut(BaseModel):
@@ -72,6 +74,7 @@ class ItemOut(BaseModel):
     preco: Decimal
     qtd: int
     modo_individual: bool
+    nota: Optional[str] = None
     ordem: int
     atribuicoes: List[AtribuicaoOut] = []
 

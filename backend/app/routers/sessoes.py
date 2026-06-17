@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+import os, re, base64
+import anthropic as anthropic_sdk
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -35,7 +37,7 @@ def _sessao_to_out(s: Sessao) -> dict:
             {
                 "id": it.id, "nome": it.nome, "emoji": it.emoji,
                 "preco": float(it.preco), "qtd": it.qtd,
-                "modo_individual": it.modo_individual, "ordem": it.ordem,
+                "modo_individual": it.modo_individual, "nota": it.nota, "ordem": it.ordem,
                 "atribuicoes": [
                     {"id": a.id, "pessoa_id": a.pessoa_id, "qtd": a.qtd}
                     for a in it.atribuicoes
@@ -127,7 +129,7 @@ def adicionar_item(sessao_id: str, body: ItemIn, user: User = Depends(get_curren
     db.commit()
     db.refresh(it)
     return {"id": it.id, "nome": it.nome, "emoji": it.emoji, "preco": float(it.preco),
-            "qtd": it.qtd, "modo_individual": it.modo_individual, "ordem": it.ordem, "atribuicoes": []}
+            "qtd": it.qtd, "modo_individual": it.modo_individual, "nota": it.nota, "ordem": it.ordem, "atribuicoes": []}
 
 
 @router.put("/{sessao_id}/itens/{item_id}")
@@ -141,7 +143,7 @@ def atualizar_item(sessao_id: str, item_id: str, body: ItemUpdate, user: User = 
     db.commit()
     db.refresh(it)
     return {"id": it.id, "nome": it.nome, "emoji": it.emoji, "preco": float(it.preco),
-            "qtd": it.qtd, "modo_individual": it.modo_individual, "ordem": it.ordem,
+            "qtd": it.qtd, "modo_individual": it.modo_individual, "nota": it.nota, "ordem": it.ordem,
             "atribuicoes": [{"id": a.id, "pessoa_id": a.pessoa_id, "qtd": a.qtd} for a in it.atribuicoes]}
 
 
@@ -174,3 +176,49 @@ def atribuir(
     db.commit()
     db.refresh(it)
     return [{"id": a.id, "pessoa_id": a.pessoa_id, "qtd": a.qtd} for a in it.atribuicoes]
+
+
+# ── Scanner de recibo ──────────────────────────────────────────────────────────
+
+@router.post("/{sessao_id}/scan-receipt")
+async def scan_receipt(
+    sessao_id: str,
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _sessao_or_404(sessao_id, user, db)
+    image_bytes = await file.read()
+    b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+    media_type = file.content_type or "image/jpeg"
+
+    client = anthropic_sdk.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    message = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": media_type, "data": b64},
+                    },
+                    {
+                        "type": "text",
+                        "text": 'Analise este recibo/nota fiscal e retorne APENAS um JSON array com os itens. Formato: [{"nome": string, "preco": number (valor unitário em reais), "qtd": integer, "emoji": string (emoji relevante)}]. Sem texto extra, apenas o JSON.',
+                    },
+                ],
+            }
+        ],
+    )
+    text = message.content[0].text
+    match = re.search(r'\[.*\]', text, re.DOTALL)
+    if not match:
+        raise HTTPException(status_code=422, detail="Não foi possível extrair itens do recibo")
+    import json
+    try:
+        itens_data = json.loads(match.group())
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=422, detail="Resposta do modelo inválida")
+    return itens_data
