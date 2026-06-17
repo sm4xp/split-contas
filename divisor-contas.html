@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Divisor de Contas</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;min-height:100vh;max-width:420px;margin:0 auto}
+.app{display:flex;flex-direction:column;height:100svh;overflow:hidden}
+.topbar{background:#fff;border-bottom:0.5px solid rgba(0,0,0,.12);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:600;color:#111}
+.topbar-sub{font-size:12px;color:#888;margin-top:1px}
+.btn-sm{background:none;border:1px solid rgba(0,0,0,.2);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;color:#111;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.btn-sm:active{transform:scale(.97);background:#f0f0f0}
+.pessoas-area{background:#fff;border-bottom:0.5px solid rgba(0,0,0,.12);padding:10px 14px;flex-shrink:0}
+.pessoas-label{font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.pessoas-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.pessoas-scroll::-webkit-scrollbar{display:none}
+.pessoa-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer}
+.pessoa-icon{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;transition:transform .15s,box-shadow .15s;border:2.5px solid transparent;position:relative;flex-shrink:0}
+.pessoa-icon.drop-hover{transform:scale(1.15);box-shadow:0 0 0 4px rgba(29,158,117,.4)}
+.pessoa-icon.selected-group{border-color:#1D9E75;box-shadow:0 0 0 2px rgba(29,158,117,.3)}
+.pessoa-nome{font-size:10px;color:#666;max-width:56px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pessoa-total{font-size:10px;font-weight:600;color:#111}
+.pessoa-badge{position:absolute;top:-2px;right:-2px;background:#E24B4A;color:#fff;border-radius:50%;width:17px;height:17px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:600}
+.add-pessoa{width:52px;height:52px;border-radius:50%;border:1.5px dashed rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#aaa;flex-shrink:0}
+.add-pessoa:active{transform:scale(.95)}
+.itens-area{flex:1;overflow-y:auto;padding:12px 14px;-webkit-overflow-scrolling:touch}
+.itens-label{font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.item-card{background:#fff;border:0.5px solid rgba(0,0,0,.12);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;touch-action:none;transition:box-shadow .15s,transform .15s,opacity .15s;position:relative}
+.item-card.dragging{opacity:.5;transform:scale(.97)}
+.item-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;background:#f5f5f0}
+.item-info{flex:1;min-width:0}
+.item-nome{font-size:14px;font-weight:500;color:#111;cursor:text}
+.item-nome-input{font-size:14px;font-weight:500;border:none;outline:none;background:transparent;color:#111;width:100%;font-family:inherit;padding:0}
+.item-preco{font-size:12px;color:#666;margin-top:2px;display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.item-preco-input{font-size:12px;border:none;outline:none;background:transparent;color:#666;width:64px;font-family:inherit;padding:0}
+.item-assigned-pills{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+.assigned-pill{font-size:9px;padding:2px 6px;border-radius:20px;font-weight:500}
+.qtd-ctrl{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.qtd-btn{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,.2);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:#111;flex-shrink:0}
+.qtd-btn:active{background:#f0f0f0}
+.qtd-num{font-size:12px;font-weight:600;min-width:16px;text-align:center;color:#111}
+.btn-icon{background:none;border:none;cursor:pointer;padding:5px;border-radius:6px;color:#aaa;display:flex;align-items:center;justify-content:center}
+.btn-icon:active{background:#f0f0f0;color:#E24B4A}
+.bottom-bar{background:#fff;border-top:0.5px solid rgba(0,0,0,.12);padding:10px 14px;flex-shrink:0;display:flex;gap:8px;align-items:center}
+.total-chip{background:#f5f5f0;border-radius:8px;padding:7px 10px;font-size:12px;color:#666;flex:1}
+.total-chip strong{color:#111;font-size:14px}
+.btn-resumo{background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.btn-resumo:active{background:#0F6E56}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:100;backdrop-filter:blur(2px)}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:16px 16px 36px;width:100%;max-width:420px;max-height:88svh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-handle{width:36px;height:4px;background:rgba(0,0,0,.15);border-radius:2px;margin:0 auto 14px}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:14px;color:#111}
+.modal-input-row{display:flex;gap:8px;margin-bottom:10px}
+.modal-input{flex:1;border:1px solid rgba(0,0,0,.2);border-radius:8px;padding:10px 12px;font-size:14px;background:#fff;color:#111;font-family:inherit;-webkit-appearance:none}
+.modal-input:focus{outline:none;box-shadow:0 0 0 2px rgba(29,158,117,.35);border-color:#1D9E75}
+.section-label{font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:14px}
+.emoji-opt{width:100%;aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:2px solid transparent;background:#f5f5f0}
+.emoji-opt.sel{border-color:#1D9E75;background:#E1F5EE}
+.color-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.color-dot{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2.5px solid transparent}
+.color-dot.sel{transform:scale(1.15)}
+.btn-add-full{background:#1D9E75;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-add-full:active{background:#0F6E56}
+.btn-cancel{background:none;border:1px solid rgba(0,0,0,.2);border-radius:10px;padding:12px;font-size:14px;cursor:pointer;width:100%;margin-top:8px;color:#111;font-family:inherit}
+.btn-cancel:active{background:#f5f5f0}
+.group-bar{background:#E1F5EE;border:0.5px solid #9FE1CB;border-radius:8px;padding:8px 12px;margin:8px 14px 0;display:flex;align-items:center;gap:8px;font-size:12px;color:#085041}
+.resumo-pessoa{background:#f5f5f0;border-radius:12px;padding:12px;margin-bottom:10px}
+.resumo-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.resumo-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.resumo-nome{font-size:14px;font-weight:600;color:#111}
+.resumo-total{font-size:18px;font-weight:600;color:#0F6E56;margin-left:auto}
+.resumo-item-row{display:flex;justify-content:space-between;font-size:12px;color:#666;padding:4px 0;border-bottom:0.5px solid rgba(0,0,0,.08)}
+.resumo-item-row:last-child{border-bottom:none}
+.ghost{position:fixed;pointer-events:none;z-index:999;opacity:.9;transform:scale(1.05) rotate(-2deg);background:#fff;border-radius:12px;padding:8px 12px;box-shadow:0 6px 24px rgba(0,0,0,.2);display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:14px;font-weight:500;max-width:200px;border:1px solid rgba(0,0,0,.1)}
+.empty-state{text-align:center;padding:40px 20px;color:#bbb}
+.empty-state i{font-size:48px;display:block;margin-bottom:12px}
+.gorjeta-bar{background:#fff;border-top:0.5px solid rgba(0,0,0,.12);padding:8px 14px;flex-shrink:0;display:flex;align-items:center;gap:8px}
+.gorjeta-label{font-size:11px;font-weight:600;color:#888;white-space:nowrap}
+.gorjeta-btns{display:flex;gap:5px;flex:1}
+.gorjeta-btn{flex:1;padding:6px 0;border:1px solid rgba(0,0,0,.18);border-radius:20px;background:none;font-size:12px;font-weight:500;color:#555;cursor:pointer;transition:all .15s}
+.gorjeta-btn.ativo{background:#FAEEDA;border-color:#EF9F27;color:#633806}
+.gorjeta-btn:active{transform:scale(.95)}
+.gorjeta-custom{width:52px;border:1px solid rgba(0,0,0,.18);border-radius:8px;padding:5px 6px;font-size:12px;text-align:center;font-family:inherit;color:#111;background:#fff;-webkit-appearance:none}
+.gorjeta-custom:focus{outline:none;border-color:#EF9F27;box-shadow:0 0 0 2px rgba(239,159,39,.25)}
+.gorjeta-val{font-size:11px;color:#633806;font-weight:600;white-space:nowrap;background:#FAEEDA;border-radius:6px;padding:4px 7px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">&#127860; Divisor de Contas</div>
+      <div class="topbar-sub" id="topbar-sub">Arraste itens para as pessoas</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn-sm" id="btn-grupo" onclick="toggleModoGrupo()"><i class="ti ti-users"></i> Grupo</button>
+      <button class="btn-sm" onclick="abrirModalItem()"><i class="ti ti-plus"></i> Item</button>
+    </div>
+  </div>
+
+  <div class="pessoas-area">
+    <div class="pessoas-label">Pessoas</div>
+    <div class="pessoas-scroll" id="pessoas-scroll">
+      <div class="add-pessoa" onclick="abrirModalPessoa()"><i class="ti ti-plus" style="font-size:22px"></i></div>
+    </div>
+  </div>
+
+  <div id="group-bar-area"></div>
+
+  <div class="itens-area" id="itens-area">
+    <div class="itens-label">
+      <span>Itens do pedido</span>
+      <span id="total-itens" style="font-size:12px;color:#bbb"></span>
+    </div>
+    <div id="itens-list"></div>
+    <div class="empty-state" id="empty-state">
+      <i class="ti ti-receipt"></i>
+      <div style="font-size:14px">Adicione itens do pedido<br>e arraste para cada pessoa</div>
+    </div>
+  </div>
+
+  <div class="gorjeta-bar">
+    <div class="gorjeta-label">&#129335; Gorjeta</div>
+    <div class="gorjeta-btns">
+      <button class="gorjeta-btn" id="gb-0" onclick="setGorjeta(0)">0%</button>
+      <button class="gorjeta-btn" id="gb-10" onclick="setGorjeta(10)">10%</button>
+      <button class="gorjeta-btn ativo" id="gb-12" onclick="setGorjeta(12)">12%</button>
+      <button class="gorjeta-btn" id="gb-15" onclick="setGorjeta(15)">15%</button>
+    </div>
+    <input class="gorjeta-custom" id="gorjeta-custom" type="number" min="0" max="100" step="1" placeholder="%" inputmode="numeric" oninput="setGorjetaCustom(this.value)">
+    <span class="gorjeta-val" id="gorjeta-val">+R$ 0,00</span>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="total-chip">Total: <strong id="total-geral">R$ 0,00</strong></div>
+    <button class="btn-resumo" onclick="abrirResumo()"><i class="ti ti-receipt"></i> Ver resumo</button>
+  </div>
+</div>
+
+<div id="modal-container"></div>
+<div class="ghost" id="ghost" style="display:none"></div>
+
+<script>
+const CORES=[
+  {bg:'#EEEDFE',txt:'#3C3489',border:'#AFA9EC'},
+  {bg:'#E1F5EE',txt:'#085041',border:'#5DCAA5'},
+  {bg:'#FAECE7',txt:'#712B13',border:'#F0997B'},
+  {bg:'#FBEAF0',txt:'#72243E',border:'#ED93B1'},
+  {bg:'#E6F1FB',txt:'#0C447C',border:'#85B7EB'},
+  {bg:'#FAEEDA',txt:'#633806',border:'#EF9F27'},
+  {bg:'#EAF3DE',txt:'#27500A',border:'#97C459'},
+  {bg:'#FCEBEB',txt:'#791F1F',border:'#F09595'},
+];
+const EMOJIS_PESSOA=['👤','👦','👧','👨','👩','🧔','👴','👵','🧑','🤵','👰','🧒','🧑‍🦱','🧑‍🦳','🧑‍🦲'];
+const EMOJIS_ITEM=['🍺','🍻','🥃','🍷','🍸','🍹','🥤','☕','🧃','💧','🍕','🍔','🌮','🌯','🍣','🍜','🍝','🥗','🍗','🥩','🧀','🍟','🍿','🥜','🍰','🍦','🧁','🍫','🧆','🥐'];
+
+let pessoas=[], itens=[], modoGrupo=false, grupoSelecionado=[], draggingItem=null;
+let modalPessoa_emoji='👤', modalPessoa_cor=0, modalItem_emoji='🍺';
+let touchData=null;
+let gorjetaPct=12;
+
+function uid(){return Math.random().toString(36).slice(2,9)}
+
+function init(){
+  addP('João','👦',0); addP('Maria','👩',1); addP('Ana','👧',2);
+  addI('Cerveja','🍺',12,1); addI('Pizza','🍕',45,1); addI('Caipirinha','🍹',18,2);
+  render();
+  setGorjeta(12);
+}
+function addP(nome,emoji,ci){pessoas.push({id:uid(),nome,emoji,cor:CORES[ci%CORES.length]})}
+function addI(nome,emoji,preco,qtd){itens.push({id:uid(),nome,emoji,preco,qtd,atribuidos:[],eN:false,eP:false})}
+
+function render(){renderPessoas();renderItens();renderTotais();renderGroupBar()}
+
+function renderPessoas(){
+  const c=document.getElementById('pessoas-scroll');
+  c.innerHTML='';
+  const addBtn=document.createElement('div');
+  addBtn.className='add-pessoa';
+  addBtn.innerHTML='<i class="ti ti-plus" style="font-size:22px"></i>';
+  addBtn.onclick=abrirModalPessoa;
+  c.appendChild(addBtn);
+  pessoas.forEach(p=>{
+    const sel=modoGrupo&&grupoSelecionado.includes(p.id);
+    const wrap=document.createElement('div');
+    wrap.className='pessoa-wrap';
+    const icon=document.createElement('div');
+    icon.className='pessoa-icon'+(sel?' selected-group':'');
+    icon.style.cssText=`background:${p.cor.bg};color:${p.cor.txt}`;
+    icon.dataset.pid=p.id;
+    icon.textContent=p.emoji;
+    const cnt=itens.filter(it=>it.atribuidos.includes(p.id)).length;
+    if(cnt>0){
+      const b=document.createElement('div');
+      b.className='pessoa-badge';b.textContent=cnt;
+      icon.appendChild(b);
+    }
+    icon.onclick=()=>{if(modoGrupo)toggleGrupo(p.id)};
+    icon.addEventListener('dragover',e=>{e.preventDefault();icon.classList.add('drop-hover')});
+    icon.addEventListener('dragleave',()=>icon.classList.remove('drop-hover'));
+    icon.addEventListener('drop',e=>{e.preventDefault();icon.classList.remove('drop-hover');if(draggingItem)atribuir(draggingItem,p.id)});
+    const nome=document.createElement('div');nome.className='pessoa-nome';nome.textContent=p.nome;
+    const tot=document.createElement('div');tot.className='pessoa-total';tot.id='pt-'+p.id;
+    wrap.append(icon,nome,tot);
+    c.insertBefore(wrap,c.firstChild);
+  });
+}
+
+function renderItens(){
+  const list=document.getElementById('itens-list');
+  const empty=document.getElementById('empty-state');
+  list.innerHTML='';
+  empty.style.display=itens.length?'none':'block';
+  itens.forEach(it=>{
+    const card=document.createElement('div');
+    card.className='item-card';
+    card.draggable=true;
+    if(it.atribuidos.length){
+      const fp=pessoas.find(p=>p.id===it.atribuidos[0]);
+      if(fp) card.style.borderLeft=`3px solid ${fp.cor.border}`;
+    }
+    const icon=document.createElement('div');
+    icon.className='item-icon';
+    const fp=it.atribuidos.length?pessoas.find(p=>p.id===it.atribuidos[0]):null;
+    if(fp) icon.style.background=fp.cor.bg;
+    icon.textContent=it.emoji;
+    const info=document.createElement('div');info.className='item-info';
+    const nomeWrap=document.createElement('div');nomeWrap.className='item-nome-wrap';
+    if(it.eN){
+      const inp=document.createElement('input');inp.className='item-nome-input';inp.value=it.nome;
+      inp.onblur=()=>{it.nome=inp.value||it.nome;it.eN=false;render()};
+      inp.onkeydown=e=>{if(e.key==='Enter')inp.blur()};
+      nomeWrap.appendChild(inp);setTimeout(()=>inp.focus(),10);
+    } else {
+      const n=document.createElement('span');n.className='item-nome';n.textContent=it.nome;
+      n.ondblclick=()=>{it.eN=true;render()};n.onclick=e=>e.stopPropagation();
+      nomeWrap.appendChild(n);
+    }
+    const preco=document.createElement('div');preco.className='item-preco';
+    preco.appendChild(document.createTextNode('R$ '));
+    if(it.eP){
+      const inp=document.createElement('input');inp.className='item-preco-input';inp.type='number';inp.step='0.01';inp.min='0';inp.value=it.preco.toFixed(2);
+      inp.onblur=()=>{it.preco=parseFloat(inp.value)||0;it.eP=false;render()};
+      inp.onkeydown=e=>{if(e.key==='Enter')inp.blur()};
+      preco.appendChild(inp);setTimeout(()=>inp.focus(),10);
+    } else {
+      const pv=document.createElement('span');pv.textContent=it.preco.toFixed(2).replace('.',',');
+      pv.style.cursor='text';pv.ondblclick=()=>{it.eP=true;render()};
+      const hint=document.createElement('span');hint.style.cssText='font-size:9px;color:#ccc';hint.textContent=' · duplo toque p/ editar';
+      preco.append(pv,hint);
+    }
+    info.append(nomeWrap,preco);
+    if(it.atribuidos.length){
+      const pills=document.createElement('div');pills.className='item-assigned-pills';
+      it.atribuidos.forEach(pid=>{
+        const p=pessoas.find(x=>x.id===pid);if(!p)return;
+        const pill=document.createElement('span');pill.className='assigned-pill';
+        pill.style.cssText=`background:${p.cor.bg};color:${p.cor.txt}`;
+        pill.textContent=p.emoji+' '+p.nome;
+        pills.appendChild(pill);
+      });
+      info.appendChild(pills);
+    }
+    const qtd=document.createElement('div');qtd.className='qtd-ctrl';
+    qtd.innerHTML=`<button class="qtd-btn" data-iid="${it.id}" data-d="-1">−</button><span class="qtd-num">${it.qtd}</span><button class="qtd-btn" data-iid="${it.id}" data-d="1">+</button>`;
+    qtd.querySelectorAll('.qtd-btn').forEach(b=>b.onclick=e=>{e.stopPropagation();mudaQtd(b.dataset.iid,parseInt(b.dataset.d))});
+    const del=document.createElement('button');del.className='btn-icon';
+    del.innerHTML='<i class="ti ti-trash" style="font-size:16px"></i>';
+    del.onclick=()=>{itens=itens.filter(x=>x.id!==it.id);render()};
+    card.append(icon,info,qtd,del);
+    card.addEventListener('dragstart',e=>{draggingItem=it.id;card.classList.add('dragging');const g=document.getElementById('ghost');g.innerHTML=it.emoji+' '+it.nome;g.style.display='flex';e.dataTransfer.setDragImage(g,0,0)});
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingItem=null;document.getElementById('ghost').style.display='none'});
+    card.addEventListener('touchstart',e=>tStart(e,it.id),{passive:true});
+    list.appendChild(card);
+  });
+  document.getElementById('total-itens').textContent=itens.length+' item'+(itens.length!==1?'s':'');
+}
+
+function renderTotais(){
+  let grand=0;
+  pessoas.forEach(p=>{
+    let t=0;
+    itens.forEach(it=>{if(it.atribuidos.includes(p.id)) t+=it.preco*it.qtd/it.atribuidos.length});
+    grand+=t;
+    const el=document.getElementById('pt-'+p.id);
+    if(el) el.textContent=t>0?'R$ '+(t*(1+gorjetaPct/100)).toFixed(2).replace('.',','):'';
+  });
+  const gorjVal=grand*gorjetaPct/100;
+  document.getElementById('total-geral').textContent='R$ '+(grand+gorjVal).toFixed(2).replace('.',',');
+  document.getElementById('gorjeta-val').textContent='+R$ '+gorjVal.toFixed(2).replace('.',',');
+}
+
+function setGorjeta(pct){
+  gorjetaPct=pct;
+  document.getElementById('gorjeta-custom').value='';
+  [0,10,12,15].forEach(v=>{
+    const b=document.getElementById('gb-'+v);
+    if(b) b.className='gorjeta-btn'+(v===pct?' ativo':'');
+  });
+  renderTotais();
+}
+
+function setGorjetaCustom(val){
+  gorjetaPct=Math.max(0,Math.min(100,parseFloat(val)||0));
+  [0,10,12,15].forEach(v=>{
+    const b=document.getElementById('gb-'+v);
+    if(b) b.className='gorjeta-btn';
+  });
+  renderTotais();
+}
+
+function renderGroupBar(){
+  const a=document.getElementById('group-bar-area');
+  if(modoGrupo&&grupoSelecionado.length>0){
+    const nomes=grupoSelecionado.map(id=>pessoas.find(p=>p.id===id)?.nome||'').join(', ');
+    a.innerHTML=`<div class="group-bar"><i class="ti ti-users"></i><span>Grupo: <strong>${nomes}</strong> — arraste um item para dividir</span><button class="btn-icon" onclick="grupoSelecionado=[];renderGroupBar();renderPessoas()" style="margin-left:auto"><i class="ti ti-x"></i></button></div>`;
+  } else { a.innerHTML=''; }
+}
+
+function atribuir(iid,pid){
+  const it=itens.find(x=>x.id===iid);if(!it)return;
+  if(modoGrupo&&grupoSelecionado.length>0){
+    it.atribuidos=[...grupoSelecionado];
+  } else {
+    if(it.atribuidos.includes(pid)) it.atribuidos=it.atribuidos.filter(x=>x!==pid);
+    else it.atribuidos.push(pid);
+  }
+  render();
+}
+
+function mudaQtd(iid,d){const it=itens.find(x=>x.id===iid);if(it){it.qtd=Math.max(1,it.qtd+d);render()}}
+function toggleModoGrupo(){
+  modoGrupo=!modoGrupo;if(!modoGrupo)grupoSelecionado=[];
+  const b=document.getElementById('btn-grupo');
+  b.style.cssText=modoGrupo?'background:#E1F5EE;border-color:#5DCAA5;color:#085041':'';
+  document.getElementById('topbar-sub').textContent=modoGrupo?'Selecione pessoas p/ agrupar':'Arraste itens para as pessoas';
+  render();
+}
+function toggleGrupo(pid){
+  if(grupoSelecionado.includes(pid)) grupoSelecionado=grupoSelecionado.filter(x=>x!==pid);
+  else grupoSelecionado.push(pid);
+  render();
+}
+
+function tStart(e,iid){
+  const t=e.touches[0];touchData={iid,moved:false};
+  const it=itens.find(x=>x.id===iid);if(!it)return;
+  const g=document.getElementById('ghost');g.innerHTML=it.emoji+' '+it.nome;g.style.display='flex';
+  g.style.left=t.clientX-50+'px';g.style.top=t.clientY-30+'px';
+  document.addEventListener('touchmove',tMove,{passive:false});
+  document.addEventListener('touchend',tEnd);
+}
+function tMove(e){
+  if(!touchData)return;e.preventDefault();
+  const t=e.touches[0];touchData.moved=true;
+  const g=document.getElementById('ghost');g.style.left=t.clientX-50+'px';g.style.top=t.clientY-30+'px';
+  document.querySelectorAll('.pessoa-icon').forEach(ic=>ic.classList.remove('drop-hover'));
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  const ic=el?.closest('[data-pid]');
+  if(ic&&ic.classList.contains('pessoa-icon')) ic.classList.add('drop-hover');
+}
+function tEnd(e){
+  if(!touchData)return;
+  document.removeEventListener('touchmove',tMove);document.removeEventListener('touchend',tEnd);
+  document.getElementById('ghost').style.display='none';
+  const t=e.changedTouches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  const ic=el?.closest('[data-pid]');
+  if(ic&&ic.classList.contains('pessoa-icon')&&touchData.moved) atribuir(touchData.iid,ic.dataset.pid);
+  document.querySelectorAll('.pessoa-icon').forEach(ic=>ic.classList.remove('drop-hover'));
+  touchData=null;
+}
+
+function abrirModalPessoa(){
+  modalPessoa_emoji=EMOJIS_PESSOA[0];modalPessoa_cor=pessoas.length%CORES.length;
+  renderMPessoa();
+}
+function renderMPessoa(){
+  const emojis=EMOJIS_PESSOA.map(em=>`<div class="emoji-opt${em===modalPessoa_emoji?' sel':''}" onclick="modalPessoa_emoji='${em}';renderMPessoa()">${em}</div>`).join('');
+  const cores=CORES.map((c,i)=>`<div class="color-dot${i===modalPessoa_cor?' sel':''}" style="background:${c.bg};border-color:${i===modalPessoa_cor?'#333':'transparent'}" onclick="modalPessoa_cor=${i};renderMPessoa()"></div>`).join('');
+  const prev=document.getElementById('inp-pessoa-nome')?.value||'';
+  document.getElementById('modal-container').innerHTML=`<div class="modal-bg"><div class="modal">
+  <div class="modal-handle"></div><div class="modal-title">Adicionar pessoa</div>
+  <div class="section-label">Avatar</div><div class="emoji-grid">${emojis}</div>
+  <div class="modal-input-row"><input class="modal-input" id="inp-pessoa-nome" placeholder="Nome" maxlength="16" value="${prev}"></div>
+  <div class="section-label">Cor</div><div class="color-grid">${cores}</div>
+  <button class="btn-add-full" onclick="confirmarPessoa()"><i class="ti ti-user-plus"></i> Adicionar</button>
+  <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+  </div></div>`;
+}
+function confirmarPessoa(){
+  const nome=document.getElementById('inp-pessoa-nome').value.trim()||'Pessoa '+(pessoas.length+1);
+  pessoas.push({id:uid(),nome,emoji:modalPessoa_emoji,cor:CORES[modalPessoa_cor]});
+  fecharModal();render();
+}
+
+function abrirModalItem(){
+  modalItem_emoji=EMOJIS_ITEM[0];renderMItem();
+}
+function renderMItem(){
+  const emojis=EMOJIS_ITEM.map(em=>`<div class="emoji-opt${em===modalItem_emoji?' sel':''}" onclick="modalItem_emoji='${em}';renderMItem()">${em}</div>`).join('');
+  const pn=document.getElementById('inp-item-nome')?.value||'';
+  const pp=document.getElementById('inp-item-preco')?.value||'';
+  const pq=document.getElementById('inp-item-qtd')?.value||'1';
+  document.getElementById('modal-container').innerHTML=`<div class="modal-bg"><div class="modal">
+  <div class="modal-handle"></div><div class="modal-title">Adicionar item</div>
+  <div class="section-label">Ícone</div><div class="emoji-grid">${emojis}</div>
+  <div class="modal-input-row">
+    <input class="modal-input" id="inp-item-nome" placeholder="Nome do item" maxlength="24" style="flex:2" value="${pn}">
+    <input class="modal-input" id="inp-item-preco" type="number" placeholder="R$ Preço" min="0" step="0.01" style="flex:1" value="${pp}" inputmode="decimal">
+  </div>
+  <div class="modal-input-row">
+    <input class="modal-input" id="inp-item-qtd" type="number" placeholder="Qtd" min="1" step="1" value="${pq}" style="max-width:100px" inputmode="numeric">
+    <span style="font-size:12px;color:#888;align-self:center;padding-left:4px">unidade(s)</span>
+  </div>
+  <button class="btn-add-full" onclick="confirmarItem()"><i class="ti ti-plus"></i> Adicionar item</button>
+  <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+  </div></div>`;
+}
+function confirmarItem(){
+  const nome=document.getElementById('inp-item-nome').value.trim()||'Item';
+  const preco=parseFloat(document.getElementById('inp-item-preco').value)||0;
+  const qtd=parseInt(document.getElementById('inp-item-qtd').value)||1;
+  itens.push({id:uid(),nome,emoji:modalItem_emoji,preco,qtd,atribuidos:[],eN:false,eP:false});
+  fecharModal();render();
+}
+
+function abrirResumo(){
+  let html=`<div class="modal-bg"><div class="modal"><div class="modal-handle"></div><div class="modal-title">&#128203; Resumo da conta</div>`;
+  let grand=0;
+  pessoas.forEach(p=>{
+    let subtot=0;const rows=[];
+    itens.forEach(it=>{
+      if(it.atribuidos.includes(p.id)){
+        const v=it.preco*it.qtd/it.atribuidos.length;subtot+=v;
+        const div=it.atribuidos.length>1?` ÷${it.atribuidos.length}`:'';
+        rows.push(`<div class="resumo-item-row"><span>${it.emoji} ${it.nome} ×${it.qtd}${div}</span><span>R$ ${v.toFixed(2).replace('.',',')}</span></div>`);
+      }
+    });
+    grand+=subtot;
+    const gorj=subtot*gorjetaPct/100;
+    const total=subtot+gorj;
+    if(rows.length||true){
+      const gorjRow=gorjetaPct>0?`<div class="resumo-item-row" style="color:#BA7517"><span>&#129335; Gorjeta (${gorjetaPct}%)</span><span>R$ ${gorj.toFixed(2).replace('.',',')}</span></div>`:'';
+      html+=`<div class="resumo-pessoa"><div class="resumo-header">
+        <div class="resumo-avatar" style="background:${p.cor.bg};color:${p.cor.txt}">${p.emoji}</div>
+        <span class="resumo-nome">${p.nome}</span>
+        <span class="resumo-total">R$ ${total.toFixed(2).replace('.',',')}</span>
+      </div>${rows.length?rows.join('')+gorjRow:'<div style="font-size:12px;color:#bbb">Nenhum item atribuído</div>'}</div>`;
+    }
+  });
+  const grandGorj=grand*gorjetaPct/100;
+  html+=`<div style="display:flex;flex-direction:column;gap:4px;padding:12px 4px;border-top:1px solid rgba(0,0,0,.08);margin-top:4px">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#888"><span>Subtotal</span><span>R$ ${grand.toFixed(2).replace('.',',')}</span></div>
+    ${gorjetaPct>0?`<div style="display:flex;justify-content:space-between;font-size:13px;color:#BA7517"><span>&#129335; Gorjeta (${gorjetaPct}%)</span><span>R$ ${grandGorj.toFixed(2).replace('.',',')}</span></div>`:''}
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;margin-top:4px"><span>Total geral</span><span style="color:#0F6E56">R$ ${(grand+grandGorj).toFixed(2).replace('.',',')}</span></div>
+  </div>`;
+  html+=`<button class="btn-cancel" onclick="fecharModal()">Fechar</button></div></div>`;
+  document.getElementById('modal-container').innerHTML=html;
+}
+
+function fecharModal(){document.getElementById('modal-container').innerHTML=''}
+
+init();
+</script>
+</body>
+</html>
