@@ -384,8 +384,8 @@ async function submitAuth() {
       showApp();
     } else {
       await api('POST', '/auth/register', {email, senha});
-      setAuthMsg('Cadastro realizado! Verifique seu e-mail para ativar a conta.', 'ok');
-      document.getElementById('resend-link').style.display = 'block';
+      setAuthMsg('Cadastro realizado! Faça login para continuar.', 'ok');
+      switchTab('login');
     }
   } catch (e) {
     setAuthMsg(e.message);

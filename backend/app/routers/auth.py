@@ -17,19 +17,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def register(body: RegisterIn, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == body.email).first():
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
-    user = User(email=body.email.lower(), senha_hash=hash_senha(body.senha))
+    user = User(email=body.email.lower(), senha_hash=hash_senha(body.senha), verificado=True)
     db.add(user)
-    db.flush()
-    token_str = str(uuid.uuid4())
-    token = EmailToken(
-        user_id=user.id,
-        token=token_str,
-        expira_em=datetime.now(timezone.utc) + timedelta(hours=24),
-    )
-    db.add(token)
     db.commit()
-    enviar_email_verificacao(user.email, token_str)
-    return {"message": "Cadastro realizado. Verifique seu e-mail para ativar a conta."}
+    return {"message": "Cadastro realizado com sucesso. Faça login para continuar."}
 
 
 @router.get("/verify-email")
