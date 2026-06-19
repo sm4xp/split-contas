@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Divisor de Contas</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;min-height:100vh;color:#111}
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.login-box{background:#fff;border-radius:16px;padding:32px;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.login-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-sub{font-size:13px;color:#888;margin-bottom:24px}
+.inp{width:100%;border:1px solid rgba(0,0,0,.2);border-radius:8px;padding:11px 12px;font-size:14px;font-family:inherit;margin-bottom:10px}
+.inp:focus{outline:none;border-color:#1D9E75;box-shadow:0 0 0 2px rgba(29,158,117,.15)}
+.btn{width:100%;background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn:hover{background:#0F6E56}
+.err{color:#E24B4A;font-size:13px;margin-top:8px;text-align:center}
+
+/* Dashboard */
+.dash{display:none;padding:24px;max-width:1100px;margin:0 auto}
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:gap}
+.dash-title{font-size:22px;font-weight:700}
+.dash-sub{font-size:13px;color:#888;margin-top:2px}
+.btn-sm{background:none;border:1px solid rgba(0,0,0,.2);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer}
+.btn-sm:hover{background:#f0f0f0}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-num{font-size:28px;font-weight:700;color:#1D9E75}
+.stat-label{font-size:12px;color:#888;margin-top:4px}
+
+.section-title{font-size:14px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+th{background:#f5f5f0;padding:10px 14px;font-size:12px;font-weight:600;color:#666;text-align:left;border-bottom:1px solid rgba(0,0,0,.08)}
+td{padding:10px 14px;font-size:13px;border-bottom:0.5px solid rgba(0,0,0,.06)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa;cursor:pointer}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-ok{background:#E1F5EE;color:#085041}
+.badge-no{background:#f5f5f0;color:#888}
+
+/* Drawer de detalhes */
+.drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:none}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:100%;max-width:480px;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.12);overflow-y:auto;padding:24px;z-index:101;display:none}
+.drawer-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.drawer-sub{font-size:13px;color:#888;margin-bottom:20px}
+.sessao-card{background:#f5f5f0;border-radius:10px;padding:14px;margin-bottom:10px}
+.sessao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.sessao-nome{font-size:14px;font-weight:600}
+.sessao-total{font-size:15px;font-weight:700;color:#1D9E75}
+.sessao-meta{font-size:12px;color:#888;margin-bottom:8px}
+.pessoas-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.pessoa-chip{font-size:12px;background:#fff;border-radius:20px;padding:2px 8px}
+.item-row{font-size:12px;color:#666;display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid rgba(0,0,0,.06)}
+.item-row:last-child{border-bottom:none}
+.btn-close{background:none;border:none;font-size:20px;cursor:pointer;color:#888;float:right;margin-top:-4px}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <div class="login-title">🍽️ Admin</div>
+    <div class="login-sub">Divisor de Contas — Área administrativa</div>
+    <input class="inp" id="adm-email" type="email" placeholder="E-mail admin" value="">
+    <input class="inp" id="adm-senha" type="password" placeholder="Senha">
+    <button class="btn" onclick="adminLogin()">Entrar</button>
+    <div class="err" id="adm-err" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div class="dash" id="dash">
+  <div class="dash-header">
+    <div>
+      <div class="dash-title">🍽️ Divisor de Contas — Admin</div>
+      <div class="dash-sub" id="dash-sub"></div>
+    </div>
+    <button class="btn-sm" onclick="adminLogout()">Sair</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card"><div class="stat-num" id="s-users">—</div><div class="stat-label">Usuários</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-verificados">—</div><div class="stat-label">Verificados</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-sessoes">—</div><div class="stat-label">Sessões</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-itens">—</div><div class="stat-label">Itens</div></div>
+  </div>
+
+  <div class="section-title">Usuários</div>
+  <table id="tabela-users">
+    <thead>
+      <tr>
+        <th>E-mail</th>
+        <th>Cadastro</th>
+        <th>Status</th>
+        <th>Sessões</th>
+        <th>Itens</th>
+      </tr>
+    </thead>
+    <tbody id="tbody-users"></tbody>
+  </table>
+</div>
+
+<!-- Drawer -->
+<div class="drawer-bg" id="drawer-bg" onclick="fecharDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="btn-close" onclick="fecharDrawer()">✕</button>
+  <div class="drawer-title" id="drawer-title"></div>
+  <div class="drawer-sub" id="drawer-sub"></div>
+  <div id="drawer-content"></div>
+</div>
+
+<script>
+const API = window.location.origin;
+let adminToken = sessionStorage.getItem('admin_token');
+
+const fmtR = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: {'Content-Type': 'application/json', ...(adminToken ? {'Authorization': 'Bearer ' + adminToken} : {})},
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || 'Erro'); }
+  return r.json();
+}
+
+async function adminLogin() {
+  const email = document.getElementById('adm-email').value.trim();
+  const senha = document.getElementById('adm-senha').value;
+  try {
+    const data = await api('POST', '/admin/login', {email, senha});
+    adminToken = data.token;
+    sessionStorage.setItem('admin_token', adminToken);
+    mostrarDash();
+  } catch(e) {
+    document.getElementById('adm-err').textContent = e.message;
+    document.getElementById('adm-err').style.display = 'block';
+  }
+}
+
+function adminLogout() {
+  adminToken = null; sessionStorage.removeItem('admin_token');
+  document.getElementById('dash').style.display = 'none';
+  document.getElementById('login-wrap').style.display = 'flex';
+}
+
+async function mostrarDash() {
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('dash').style.display = 'block';
+  document.getElementById('dash-sub').textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR');
+
+  const users = await api('GET', '/admin/users');
+  const nVerif = users.filter(u => u.verificado).length;
+  const nSessoes = users.reduce((s, u) => s + u.n_sessoes, 0);
+  const nItens = users.reduce((s, u) => s + u.n_itens, 0);
+
+  document.getElementById('s-users').textContent = users.length;
+  document.getElementById('s-verificados').textContent = nVerif;
+  document.getElementById('s-sessoes').textContent = nSessoes;
+  document.getElementById('s-itens').textContent = nItens;
+
+  const tbody = document.getElementById('tbody-users');
+  tbody.innerHTML = '';
+  users.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${u.email}</td>
+      <td>${u.criado_em}</td>
+      <td><span class="badge ${u.verificado ? 'badge-ok' : 'badge-no'}">${u.verificado ? 'Ativo' : 'Pendente'}</span></td>
+      <td>${u.n_sessoes}</td>
+      <td>${u.n_itens}</td>`;
+    tr.onclick = () => abrirDrawer(u);
+    tbody.appendChild(tr);
+  });
+}
+
+async function abrirDrawer(u) {
+  document.getElementById('drawer-title').textContent = u.email;
+  document.getElementById('drawer-sub').textContent = `Cadastro: ${u.criado_em} · ${u.n_sessoes} sessões`;
+  document.getElementById('drawer-content').innerHTML = '<div style="color:#aaa;font-size:13px;padding:12px 0">Carregando...</div>';
+  document.getElementById('drawer-bg').style.display = 'block';
+  document.getElementById('drawer').style.display = 'block';
+
+  try {
+    const sessoes = await api('GET', `/admin/users/${u.id}/sessoes`);
+    if (!sessoes.length) {
+      document.getElementById('drawer-content').innerHTML = '<div style="color:#aaa;font-size:13px;padding:12px 0">Nenhuma sessão ainda.</div>';
+      return;
+    }
+    document.getElementById('drawer-content').innerHTML = sessoes.map(s => `
+      <div class="sessao-card">
+        <div class="sessao-header">
+          <span class="sessao-nome">${s.nome}</span>
+          <span class="sessao-total">${fmtR(s.total)}</span>
+        </div>
+        <div class="sessao-meta">${s.criado_em} · ${s.n_pessoas} pessoa(s) · gorjeta ${s.gorjeta_pct}%</div>
+        <div class="pessoas-row">${s.pessoas.map(p => `<span class="pessoa-chip">${p.emoji} ${p.nome}</span>`).join('')}</div>
+        ${s.itens.map(it => `<div class="item-row"><span>${it.emoji} ${it.nome} ×${it.qtd}</span><span>${fmtR(it.preco * it.qtd)}</span></div>`).join('')}
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('drawer-content').innerHTML = `<div style="color:#E24B4A">${e.message}</div>`;
+  }
+}
+
+function fecharDrawer() {
+  document.getElementById('drawer-bg').style.display = 'none';
+  document.getElementById('drawer').style.display = 'none';
+}
+
+document.getElementById('adm-senha').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
+
+// Auto-login se já tiver token
+if (adminToken) mostrarDash().catch(() => { adminToken = null; sessionStorage.removeItem('admin_token'); });
+</script>
+</body>
+</html>

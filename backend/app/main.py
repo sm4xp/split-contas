@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from .database import engine, Base
-from .routers import auth, sessoes
+from .routers import auth, sessoes, admin
 
 Base.metadata.create_all(bind=engine)
 
@@ -31,6 +31,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(sessoes.router)
+app.include_router(admin.router)
 
 
 @app.get("/health")
@@ -55,6 +56,10 @@ if frontend_path:
     @app.get("/verify", include_in_schema=False)
     def verify_page():
         return FileResponse(os.path.join(frontend_path, "index.html"))
+
+    @app.get("/admin-panel", include_in_schema=False)
+    def admin_page():
+        return FileResponse(os.path.join(frontend_path, "admin.html"))
 
     @app.get("/", include_in_schema=False)
     def root():
