@@ -84,3 +84,12 @@ def sessoes_do_user(user_id: str, db: Session = Depends(get_db), _=Depends(get_a
             "itens": [{"nome": it.nome, "emoji": it.emoji, "preco": float(it.preco), "qtd": it.qtd} for it in s.itens],
         })
     return result
+
+
+@router.delete("/sessoes/{sessao_id}", status_code=204)
+def deletar_sessao(sessao_id: str, db: Session = Depends(get_db), _=Depends(get_admin)):
+    s = db.query(Sessao).filter(Sessao.id == sessao_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    db.delete(s)
+    db.commit()

@@ -194,19 +194,31 @@ async function abrirDrawer(u) {
       document.getElementById('drawer-content').innerHTML = '<div style="color:#aaa;font-size:13px;padding:12px 0">Nenhuma sessão ainda.</div>';
       return;
     }
-    document.getElementById('drawer-content').innerHTML = sessoes.map(s => `
-      <div class="sessao-card">
+    const renderSessoes = (lista) => lista.map(s => `
+      <div class="sessao-card" id="sc-${s.id}">
         <div class="sessao-header">
           <span class="sessao-nome">${s.nome}</span>
-          <span class="sessao-total">${fmtR(s.total)}</span>
+          <span style="display:flex;align-items:center;gap:8px">
+            <span class="sessao-total">${fmtR(s.total)}</span>
+            <button onclick="removerSessao('${s.id}')" style="background:none;border:none;cursor:pointer;color:#E24B4A;font-size:16px;padding:0 2px" title="Remover sessão">🗑️</button>
+          </span>
         </div>
         <div class="sessao-meta">${s.criado_em} · ${s.n_pessoas} pessoa(s) · gorjeta ${s.gorjeta_pct}%</div>
         <div class="pessoas-row">${s.pessoas.map(p => `<span class="pessoa-chip">${p.emoji} ${p.nome}</span>`).join('')}</div>
         ${s.itens.map(it => `<div class="item-row"><span>${it.emoji} ${it.nome} ×${it.qtd}</span><span>${fmtR(it.preco * it.qtd)}</span></div>`).join('')}
       </div>`).join('');
+    document.getElementById('drawer-content').innerHTML = renderSessoes(sessoes);
   } catch(e) {
     document.getElementById('drawer-content').innerHTML = `<div style="color:#E24B4A">${e.message}</div>`;
   }
+}
+
+async function removerSessao(sid) {
+  if (!confirm('Remover esta sessão permanentemente?')) return;
+  try {
+    await api('DELETE', `/admin/sessoes/${sid}`);
+    document.getElementById('sc-' + sid)?.remove();
+  } catch(e) { alert('Erro: ' + e.message); }
 }
 
 function fecharDrawer() {
