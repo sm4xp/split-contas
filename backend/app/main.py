@@ -39,15 +39,13 @@ def health():
     return {"status": "ok"}
 
 
-# Serve frontend in production (Railway)
-# Tenta ../frontend (root do repo) e ../../frontend (relativo ao app/)
+# Serve frontend in production (Railway).
+# Única fonte: backend/frontend — não duplicar em outro lugar do repo,
+# pois o Root Directory do serviço no Railway é "backend", então
+# qualquer frontend/ fora daqui não chega a entrar no build.
 _base = os.path.dirname(__file__)
-_candidates = [
-    os.path.join(_base, "..", "..", "frontend"),
-    os.path.join(_base, "..", "frontend"),
-    os.path.join(_base, "frontend"),
-]
-frontend_path = next((p for p in _candidates if os.path.isdir(p)), None)
+frontend_path = os.path.join(_base, "..", "frontend")
+frontend_path = frontend_path if os.path.isdir(frontend_path) else None
 
 if frontend_path:
     frontend_path = os.path.abspath(frontend_path)

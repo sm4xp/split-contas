@@ -29,7 +29,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
 # Frontend (abre direto no browser)
-open frontend/index.html
+open backend/frontend/index.html
 ```
 
 Banco local: variável `DATABASE_URL` no `.env` (PostgreSQL local ou SQLite para dev rápido).
@@ -41,11 +41,12 @@ Banco local: variável `DATABASE_URL` no `.env` (PostgreSQL local ou SQLite para
 ```
 06_split/
   CLAUDE.md
-  frontend/
-    index.html          # App principal (mobile-first, single HTML)
   backend/
+    frontend/
+      index.html       # App principal (mobile-first, single HTML)
+      admin.html        # Painel administrativo
     app/
-      main.py           # FastAPI entry point, CORS, monta routers
+      main.py           # FastAPI entry point, CORS, monta routers, serve frontend/
       database.py       # SQLAlchemy engine + get_db() + Base
       models.py         # Tabelas ORM (users, sessoes, itens, atribuicoes)
       schemas.py        # Pydantic schemas (request/response)
@@ -58,6 +59,12 @@ Banco local: variável `DATABASE_URL` no `.env` (PostgreSQL local ou SQLite para
     railway.toml
     .env.example
 ```
+
+**Importante:** o frontend vive só em `backend/frontend/` — não duplicar em
+outro lugar do repo. O Root Directory do serviço no Railway é `backend`, então
+qualquer pasta `frontend/` fora dali não entra no build e nunca é servida em
+produção (foi a causa de um bug em que correções no frontend não apareciam
+no app publicado).
 
 ---
 

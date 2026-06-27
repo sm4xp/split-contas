@@ -4,7 +4,7 @@
     {
       "name": "divisor-contas",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "3000", "frontend"],
+      "runtimeArgs": ["serve", "-p", "3000", "backend/frontend"],
       "port": 3000
     },
     {
