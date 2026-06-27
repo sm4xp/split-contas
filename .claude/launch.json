@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-p", "3000", "frontend"],
       "port": 3000
+    },
+    {
+      "name": "divisor-contas-standalone",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3002", "."],
+      "port": 3002
     }
   ]
 }
